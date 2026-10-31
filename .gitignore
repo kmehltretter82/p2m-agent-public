@@ -1,0 +1,23 @@
+# Credentials
+credentials.json
+.env
+.env.*
+
+# Agent state: the ledger and attempts can hold transcripts and platform data
+*.sqlite
+*.sqlite3
+*.db
+attempts/
+state/
+
+# Lean
+.lake/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store

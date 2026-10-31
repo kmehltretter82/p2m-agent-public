@@ -11,6 +11,7 @@ import json
 import os
 
 import shutil
+import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -146,7 +147,11 @@ def make_policy_hook(policy: ToolPolicy, denied: list[dict]):
         reason = evaluate_tool_call(name, hook_input.get("tool_input") or {}, policy)
         if reason is None:
             return {}
-        denied.append({"tool": name, "reason": reason})
+        arguments = hook_input.get("tool_input") or {}
+        denied.append(
+            {"tool": name, "reason": reason,
+             "path": arguments.get("file_path") or arguments.get("path") or arguments.get("pattern")}
+        )
         return {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
@@ -261,6 +266,9 @@ class Limits:
     max_budget_usd: float = 5.0
     wall_clock_seconds: int = 3600
     max_gate_rounds: int = 12
+    #: Pause at this share of any plan window. Limits are shared with the user's own Claude
+    #: use, so the agent must never spend all of them. Reported only near a limit (M0, M3).
+    stop_at_utilization: float = float(os.environ.get("P2M_STOP_AT_UTILIZATION", "0.70"))
 
 
 @dataclass
@@ -349,10 +357,47 @@ class _Run:
     is_error: bool = False
     text: str = ""
     limit_rejected: bool = False
+    soft_limit: bool = False
     resets_at: int | None = None
+    utilization: float | None = None
 
 
-async def _consume(client: ClaudeSDKClient, ledger: Ledger, attempt_id: int, log) -> _Run:
+def _tree_memory_kb(root_pid: int) -> tuple[int, int]:
+    """Resident memory of a process tree, and of its Lean processes, in KB."""
+    listing = subprocess.run(
+        ["ps", "-axo", "pid=,ppid=,rss=,comm="], capture_output=True, text=True, check=False
+    ).stdout
+    children: dict[int, list[int]] = {}
+    sizes: dict[int, tuple[int, str]] = {}
+    for line in listing.splitlines():
+        fields = line.split(None, 3)
+        if len(fields) == 4 and fields[0].isdigit() and fields[1].isdigit() and fields[2].isdigit():
+            pid, parent = int(fields[0]), int(fields[1])
+            children.setdefault(parent, []).append(pid)
+            sizes[pid] = (int(fields[2]), fields[3])
+    total = lean = 0
+    stack = [root_pid]
+    while stack:
+        pid = stack.pop()
+        stack.extend(children.get(pid, []))
+        size, command = sizes.get(pid, (0, ""))
+        total += size
+        if Path(command).name in ("lean", "lake"):
+            lean += size
+    return total, lean
+
+
+async def _sample_memory(peak: dict[str, int], every_seconds: float = 5.0) -> None:
+    while True:
+        total, lean = await asyncio.to_thread(_tree_memory_kb, os.getpid())
+        peak["total_kb"] = max(peak["total_kb"], total)
+        peak["lean_kb"] = max(peak["lean_kb"], lean)
+        await asyncio.sleep(every_seconds)
+
+
+async def _consume(
+    client: ClaudeSDKClient, ledger: Ledger, attempt_id: int, log, limits: Limits
+) -> _Run:
     run = _Run()
     async for message in client.receive_response():
         if isinstance(message, SystemMessage) and message.subtype == "init":
@@ -368,6 +413,14 @@ async def _consume(client: ClaudeSDKClient, ledger: Ledger, attempt_id: int, log
             if info.status == "rejected":
                 run.limit_rejected = True
                 run.resets_at = info.resets_at
+            if info.utilization is not None:
+                run.utilization = info.utilization
+                if info.utilization >= limits.stop_at_utilization and not run.soft_limit:
+                    run.soft_limit = True
+                    run.resets_at = info.resets_at
+                    log({"event": "soft_limit", "utilization": info.utilization,
+                         "stop_at": limits.stop_at_utilization})
+                    await client.interrupt()
         elif isinstance(message, AssistantMessage):
             for block in message.content:
                 name = getattr(block, "name", None)
@@ -448,7 +501,7 @@ async def run_attempt(ledger: Ledger, config: AttemptConfig) -> AttemptResult:
     policy = ToolPolicy(
         project=project,
         candidate=candidate,
-        readable=((config.env.root / ".lake" / "packages").resolve(),),
+        readable=((config.env.root / ".lake" / "packages").resolve(), config.env.bin_dir.parent),
         allow_web=config.allow_web,
     )
     denied: list[dict] = []
@@ -464,6 +517,8 @@ async def run_attempt(ledger: Ledger, config: AttemptConfig) -> AttemptResult:
     last_digest = None
     rounds = 0
     last_candidate = None
+    memory = {"total_kb": 0, "lean_kb": 0}
+    sampler = asyncio.create_task(_sample_memory(memory))
 
     try:
         async with asyncio.timeout(config.limits.wall_clock_seconds):
@@ -471,11 +526,14 @@ async def run_attempt(ledger: Ledger, config: AttemptConfig) -> AttemptResult:
                 while True:
                     control.status = None
                     await client.query(prompt)
-                    run = await _consume(client, ledger, attempt_id, log)
+                    run = await _consume(client, ledger, attempt_id, log, config.limits)
 
-                    if run.limit_rejected:
-                        return _set_status(ledger, attempt_id, "limit_wait",
-                                           "plan limit reached", last_candidate, run.resets_at, denied)
+                    if run.limit_rejected or run.soft_limit:
+                        note = "plan limit reached" if run.limit_rejected else (
+                            f"paused at {run.utilization:.0%} of a plan window"
+                        )
+                        return _set_status(ledger, attempt_id, "limit_wait", note,
+                                           last_candidate, run.resets_at, denied)
                     if run.subtype in ("error_max_budget_usd", "error_max_turns"):
                         return _set_status(ledger, attempt_id, "budget_exhausted", run.subtype,
                                            last_candidate, denied=denied)
@@ -524,5 +582,10 @@ async def run_attempt(ledger: Ledger, config: AttemptConfig) -> AttemptResult:
     except TimeoutError:
         return _set_status(ledger, attempt_id, "budget_exhausted", "wall-clock limit",
                            last_candidate, denied=denied)
+    finally:
+        sampler.cancel()
+        log({"event": "memory", "peak_total_gb": round(memory["total_kb"] / 1e6, 2),
+             "peak_lean_gb": round(memory["lean_kb"] / 1e6, 2),
+             "denied": denied})
 
 

@@ -6,11 +6,13 @@ Measured on 31 October 2026 on this Mac (8 cores, 8 GB RAM), unless stated other
 
 **Can the Mac run one worker without heavy swapping?** Yes for targets whose import closure
 avoids `import Mathlib`. Whole-Mathlib targets are not practical here. See "Lean's cost" below.
-The language-server measurement is under "One worker, measured" once M3 has run.
+One worker, measured over a real run on a targeted target: 1.22 GB peak for the whole process tree,
+0.95 GB of it Lean.
 
-**How many benchmark targets fit in the weekly limit?** Plan limits do not report a usable
-number: `utilization` came back null while the status was `allowed`. So the benchmark is sized
-by per-attempt budgets and pauses on `status: rejected`. See "Claude usage".
+**How many benchmark targets fit in the weekly limit?** Very few at a time. At 17:30 on 31 October
+the weekly window was at 51% and the five-hour window then reached 90%, mostly from the interactive
+session building this project, since all of it shares one allowance. The worker now pauses at 70%
+of any window (`P2M_STOP_AT_UTILIZATION`). See "Claude usage".
 
 ## Environments
 
@@ -54,8 +56,10 @@ Agent SDK on the plan login, with `apiKeySource: none`:
 - A stripped session with one tool used 1,663 context tokens. Default Claude Code used 18,732.
 - `total_cost_usd` is **cumulative across a resume**, while `usage` tokens cover that run only.
   So the ledger replaces cost and adds tokens.
-- `RateLimitEvent` reports `status`, `rate_limit_type` and `resets_at`. `utilization` was null, so
-  pausing keys on `status == "rejected"`.
+- `RateLimitEvent` reports `status`, `rate_limit_type` and `resets_at`. `utilization` is null while
+  `allowed` and appears from `allowed_warning` onward, so the guard works only near a limit.
+- Worker cost on a toy target: 23 turns and $0.32 estimated. Tokens times list prices matches
+  `total_cost_usd`, so usage is reported per query.
 - Overage status was `rejected` on this plan, so hitting a limit stops work rather than billing.
 
 ## SDK behavior that shaped the design

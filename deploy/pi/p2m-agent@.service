@@ -1,0 +1,20 @@
+[Unit]
+Description=p2m-agent benchmark runner for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/p2m-agent
+Environment=PATH=/home/%i/.local/bin:/home/%i/.elan/bin:/usr/bin:/bin
+# --wait sleeps through plan limits. Finished work is skipped and paused attempts resume.
+ExecStart=/home/%i/p2m-agent/.venv/bin/p2m benchmark /home/%i/p2m-agent/benchmarks/m4.json --wait
+Restart=on-failure
+RestartSec=300
+MemoryMax=14G
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

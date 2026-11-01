@@ -1,0 +1,25 @@
+{
+  "name": "m4",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "mathlib_rev": "0df444a360eaa60ab8c11dca51a86af692955474",
+  "mirror_root": "~/mirrors",
+  "skill_root": "~/mirrors",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "budget_usd": 3.0,
+  "max_turns": 120,
+  "wall_clock_seconds": 2400,
+  "arms": ["agent", "baseline"],
+  "targets": [
+    "SeymourMFMC_Binary_parity_decomposition",
+    "ProjSchedMinCut_Transform_xOfCut_injOn",
+    "MonoReset_IntervalBFS_lemma_4",
+    "LawlerWCT_SeriesPar_series_composition_union",
+    "ChvatalArtGallery_FanPartition_bound_cannot_be_improved",
+    "SeymourMFMC_Binary_minor_of_mengerian",
+    "ProjSchedMinCut_Transform_lemma_2",
+    "LostSalesOrderUpTo_Asymptotic_lemma9",
+    "ChvatalArtGallery_FanPartition_cut_into_two_triangulations",
+    "FakeUserRanking_FORC_lemma_10_high_levels"
+  ]
+}

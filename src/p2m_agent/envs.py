@@ -177,10 +177,12 @@ def ensure_env(env: LeanEnv, seed: Path | None = None, timeout: int = 3600) -> d
     stale = stale_oleans(env)
     missing = missing_modules(env)
     repaired = {"stale": len(stale), "missing": len(missing)}
-    if stale:
+    if stale or len(missing) > MAX_LOCAL_REBUILD:
         _run([str(env.lake), "exe", "cache", "get"], root, timeout)
         stale = stale_oleans(env)
         missing = missing_modules(env)
+    if missing and len(missing) > MAX_LOCAL_REBUILD:
+        raise EnvError(f"the Mathlib cache left {len(missing)} modules without a build file")
     if missing:
         # `cache get` can report "already decompressed" while files are absent, so force it.
         from_root = [f".lake/packages/mathlib/{module}" for module in missing]

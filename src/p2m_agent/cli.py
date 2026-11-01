@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from . import gate as gate_module
@@ -155,7 +156,14 @@ def cmd_report(args) -> None:
 def cmd_benchmark(args) -> None:
     from .benchmark import run_benchmark
 
-    _print(asyncio.run(run_benchmark(_ledger(), Path(args.plan), args.arm, args.only)))
+    while True:
+        result = asyncio.run(run_benchmark(_ledger(), Path(args.plan), args.arm, args.only))
+        _print(result)
+        if result["status"] != "paused" or not args.wait:
+            return
+        # A reset time can lie days ahead. Sleep until then, or an hour if none was reported.
+        until = result.get("resets_at") or time.time() + 3600
+        time.sleep(max(60.0, until - time.time() + 60.0))
 
 
 def cmd_frontier(args) -> None:
@@ -263,6 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("plan")
     p.add_argument("--arm", choices=["baseline", "agent"], action="append")
     p.add_argument("--only", action="append", help="limit to these slugs")
+    p.add_argument("--wait", action="store_true", help="sleep through plan limits, then continue")
     p.set_defaults(run=cmd_benchmark)
 
     p = commands.add_parser("frontier", help="a mission's milestones and open leaves")

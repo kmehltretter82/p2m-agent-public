@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import uuid
@@ -15,6 +16,7 @@ from p2m_agent.sandbox import Policy, bwrap_arguments, macos_profile, wrap
 from p2m_agent.worker import ToolPolicy, evaluate_tool_call, feedback_prompt, platform_closure
 
 TOOLCHAIN = "leanprover/lean4:v4.33.1"
+SANDBOX = sys.platform == "darwin" or shutil.which("bwrap") is not None
 
 
 @pytest.fixture
@@ -174,7 +176,7 @@ def _eval_read(path: Path) -> str:
 
 
 @pytest.mark.lean
-@pytest.mark.skipif(sys.platform != "darwin", reason="needs sandbox-exec")
+@pytest.mark.skipif(not SANDBOX, reason="needs sandbox-exec or bwrap")
 def test_control_lean_reads_the_canary_without_the_sandbox(lean_env, canary, tmp_path):
     path, token = canary
     source = tmp_path / "Control.lean"
@@ -184,7 +186,7 @@ def test_control_lean_reads_the_canary_without_the_sandbox(lean_env, canary, tmp
 
 
 @pytest.mark.lean
-@pytest.mark.skipif(sys.platform != "darwin", reason="needs sandbox-exec")
+@pytest.mark.skipif(not SANDBOX, reason="needs sandbox-exec or bwrap")
 def test_sandboxed_lean_cannot_read_the_canary(lean_env, canary, tmp_path):
     path, token = canary
     workdir = Path.home() / ".local" / "share" / "p2m-agent" / "test-work" / uuid.uuid4().hex
@@ -203,7 +205,7 @@ def test_sandboxed_lean_cannot_read_the_canary(lean_env, canary, tmp_path):
 
 
 @pytest.mark.lean
-@pytest.mark.skipif(sys.platform != "darwin", reason="needs sandbox-exec")
+@pytest.mark.skipif(not SANDBOX, reason="needs sandbox-exec or bwrap")
 def test_sandboxed_lean_cannot_write_outside_or_use_the_network(lean_env, tmp_path):
     workdir = Path.home() / ".local" / "share" / "p2m-agent" / "test-work" / uuid.uuid4().hex
     workdir.mkdir(parents=True)
@@ -228,7 +230,7 @@ def test_sandboxed_lean_cannot_write_outside_or_use_the_network(lean_env, tmp_pa
 
 
 @pytest.mark.lean
-@pytest.mark.skipif(sys.platform != "darwin", reason="needs sandbox-exec")
+@pytest.mark.skipif(not SANDBOX, reason="needs sandbox-exec or bwrap")
 def test_gate_works_under_the_sandbox_and_stops_a_stealing_candidate(lean_env, canary):
     from p2m_agent.worker import gate_wrap
 

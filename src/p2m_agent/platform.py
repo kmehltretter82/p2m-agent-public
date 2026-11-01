@@ -233,6 +233,37 @@ class PlatformClient:
         files = {"file": ("solution.lean", source.encode(), "text/plain")}
         return self._request("POST", "/verify", data=data, files=files).json()["submission_id"]
 
+    def submit_problem(
+        self, theorem_name: str, title: str, formal_statement: str, natural_language: str,
+        private: bool, preamble: str = "", source: str | None = None, env: str | None = None,
+    ) -> str:
+        """Publish one statement, which cannot be edited afterwards. Returns the job id.
+
+        `private` has no default on purpose: making a statement public is always a decision.
+        """
+        problem: dict[str, Any] = {
+            "theorem_name": theorem_name, "theorem_title": title,
+            "formal_statement": formal_statement, "natural_language_statement": natural_language,
+            "preamble": preamble,
+        }
+        if source:
+            problem["source"] = source
+        body: dict[str, Any] = {"problems": [problem], "private": private}
+        if env:
+            body["env"] = env
+        data = self._request("POST", "/submit-problem", json=body).json()
+        if not data.get("jobs"):
+            raise PlatformError(f"problem was not queued: {data.get('errors')}")
+        return data["jobs"][0]["job_id"]
+
+    def publish_job(self, job_id: str) -> dict:
+        return self._get(f"/publish-jobs/{job_id}")
+
+    def set_theorem_deprecated(self, theorem_id: str, deprecated: bool) -> dict:
+        return self._request(
+            "PATCH", f"/theorems/{theorem_id}", json={"deprecated": deprecated}
+        ).json()
+
     def patch_explanation(self, submission_id: str, explanation: str | None) -> dict:
         return self._request(
             "PATCH", f"/submissions/{submission_id}", json={"explanation": explanation}

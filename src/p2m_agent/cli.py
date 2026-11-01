@@ -113,6 +113,46 @@ def cmd_attempt_resume(args) -> None:
     _print(asyncio.run(run_attempt(ledger, config)).__dict__)
 
 
+def cmd_attempt_drive(args) -> None:
+    """Keep resuming one attempt until it finishes for real, or reaches the overall cap."""
+    ledger = _ledger()
+    errors = 0
+    while True:
+        row = ledger.attempt(args.attempt)
+        spent = row["cost_usd"]
+        if spent >= args.max_total:
+            _print({"outcome": "cap_reached", "cost_usd": spent, "max_total": args.max_total})
+            return
+        target = ledger.target(row["target_id"])
+        config = AttemptConfig(
+            target_id=row["target_id"],
+            env=env_for(target.toolchain, target.mathlib_rev),
+            mirror_roots=_mirror_roots(args),
+            model=row["model"] or DEFAULT_MODEL,
+            effort=row["effort"] or DEFAULT_EFFORT,
+            # The SDK's cost counter is cumulative across a resume, so the limit must be too.
+            limits=Limits(args.max_turns, min(spent + args.step, args.max_total), args.wall_clock, args.max_rounds),
+            allow_web=args.web,
+            label=row["label"],
+            resume_attempt=args.attempt,
+        )
+        result = asyncio.run(run_attempt(ledger, config))
+        cost = ledger.attempt(args.attempt)["cost_usd"]
+        print(json.dumps({"outcome": result.outcome, "note": result.note, "cost_usd": cost,
+                          "resets_at": result.resets_at, "at": time.strftime("%a %H:%M")}), flush=True)
+        if result.outcome == "limit_wait":
+            until = result.resets_at or time.time() + 3600
+            time.sleep(max(60.0, until - time.time() + 60.0))
+        elif result.outcome == "budget_exhausted":
+            errors = 0
+        elif result.outcome == "error" and errors < 3:
+            errors += 1
+            time.sleep(300)
+        else:
+            _print(result.__dict__)
+            return
+
+
 def cmd_approve(args) -> None:
     from .approval import approval_summary
 
@@ -278,6 +318,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("attempt", type=int)
     limits(p)
     p.set_defaults(run=cmd_attempt_resume)
+
+    p = attempt.add_parser("drive", help="keep resuming an attempt until it is really finished")
+    p.add_argument("attempt", type=int)
+    p.add_argument("--step", type=float, default=6.0, help="estimated dollars per segment")
+    p.add_argument("--max-total", type=float, default=60.0, help="estimated dollars overall")
+    p.add_argument("--web", action="store_true")
+    p.add_argument("--max-turns", type=int, default=250)
+    p.add_argument("--wall-clock", type=int, default=7200)
+    p.add_argument("--max-rounds", type=int, default=8)
+    mirror_option(p)
+    p.set_defaults(run=cmd_attempt_drive)
 
     p = commands.add_parser("approve", help="show, then record your approval of one exact file")
     p.add_argument("candidate", type=int)

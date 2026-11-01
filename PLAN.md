@@ -3,6 +3,14 @@
 **Status:** draft, 31 October 2026. No code yet. Source idea: [IDEA.md](IDEA.md).
 **Working name:** `p2m-agent` (CLI: `p2m`).
 
+## Current status
+
+Your direction on 1 November: focus only on finishing the
+[Consumption-Investment mission](https://prove2.me/missions/Markov_Decision_Processes_VII%3A_Consumption-Investment_Problems_and_Regime_Switching)
+with the agent on the Pi. **M4 is paused** with 4 of its 10 targets done, and can resume later with
+the same command. Every finished attempt in both arms proved its target so far, so it has not yet
+separated the agent from the baseline. Treat that as no conclusion.
+
 ## Goal
 
 A personal agent that takes a Prove2Me theorem, proves it in Lean, and submits only what has

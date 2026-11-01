@@ -54,8 +54,8 @@ theorem's exact Lean and Mathlib versions, so what you find here is what will be
 The file must contain a top-level `theorem solution` (not inside a namespace) with exactly the
 target's binders and conclusion. It must be self-contained: copy the imports and `open`s it
 needs from the target's file, never import the target itself, and use no `sorry` and no new
-axioms. Helper lemmas in the same file are fine. Prefer specific Mathlib imports, because
-`import Mathlib` is very slow on this machine. To disprove the target instead, state
+axioms. Helper lemmas in the same file are fine. Keep the file compiling in well under 300
+seconds, which is the platform's limit. To disprove the target instead, state
 `theorem solution : ¬ (∀ <all binders>, <statement>)`, negating the whole quantified statement.
 
 Look up declarations with the Lean tools rather than recalling them: names and signatures

@@ -6,7 +6,12 @@ block and is told to treat it as information, never as instructions.
 
 from __future__ import annotations
 
-from .platform import PlatformClient
+import json
+from dataclasses import asdict
+from pathlib import Path
+
+from .gate import Target, parse_imports
+from .platform import PlatformClient, target_from_theorem
 
 MAX_ITEM_CHARACTERS = 1500
 MAX_ITEMS = 8
@@ -92,9 +97,68 @@ def dossier(
             )
 
     if mission_id:
+        disproved = [
+            m for m in client.milestones(mission_id)
+            if m.theorem and m.theorem.status == "Disproved" and m.theorem.id != theorem_id
+        ]
+        if disproved:
+            parts.append("Sibling statements in this mission that were disproved, and why:")
+        for milestone in disproved[:MAX_ITEMS]:
+            accepted = client.theorem_submissions(milestone.theorem.id, status="ACCEPTED")
+            reason = accepted[0].get("explanation") if accepted else ""
+            parts.append(f"- {milestone.theorem.theorem_name}: {_clip(reason)}")
+
         comments = client.mission_comments(mission_id)
         rows = comments.get("comments", []) if isinstance(comments, dict) else comments
         if rows:
             parts.append("Mission discussion, as returned by the platform:")
             parts += [f"- {_clip(c.get('content') or c.get('body'))}" for c in rows[:MAX_ITEMS]]
     return "\n".join(parts)
+
+
+def _definition_source(client: PlatformClient, name: str) -> str:
+    rows = client._get("/definitions", q=name, limit=20).get("definitions", [])
+    for row in rows:
+        if row.get("definition_name") == name:
+            return client._get(f"/definitions/{row['definition_id']}")["definition"]
+    raise KeyError(f"no definition named {name}")
+
+
+def _theorem_source(client: PlatformClient, slug: str) -> str:
+    rows = client._get("/theorems", q=slug.replace("_", " "), view="compact", limit=50).get("theorems", [])
+    for row in rows:
+        if row.get("theorem_name", "").replace(".", "_") == slug:
+            return f"{row.get('preamble', '').strip()}\n\n{row['formal_statement'].strip()}\n"
+    raise KeyError(f"no theorem with slug {slug}")
+
+
+def fetch_mirrors(client: PlatformClient, source: str, root: Path) -> list[str]:
+    """Mirror every platform module reachable from `source`, verbatim, in the platform's layout."""
+    written: list[str] = []
+
+    def visit(text: str) -> None:
+        for module in parse_imports(text):
+            if module in written or not module.startswith(("Definitions.Def_", "Theorems.Thm_")):
+                continue
+            kind, leaf = module.split(".", 1)
+            if kind == "Definitions":
+                body = _definition_source(client, leaf.removeprefix("Def_"))
+            else:
+                body = _theorem_source(client, leaf.removeprefix("Thm_"))
+            path = root / kind / f"{leaf}.lean"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body)
+            written.append(module)
+            visit(body)
+
+    visit(source)
+    return written
+
+
+def export_target(client: PlatformClient, theorem_id: str, directory: Path, mission_id: str | None = None) -> dict:
+    """Everything a machine without the key needs: statement, mirrors and dossier, as files."""
+    target = target_from_theorem(client.theorem(theorem_id), client.environments())
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "target.json").write_text(json.dumps(asdict(target), indent=1, ensure_ascii=False))
+    (directory / "dossier.txt").write_text(dossier(client, theorem_id, mission_id=mission_id))
+    return {"target": target.theorem_name, "mirrors": fetch_mirrors(client, target.mirror_source(), directory / "mirrors")}

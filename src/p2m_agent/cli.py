@@ -192,6 +192,17 @@ def cmd_sync(args) -> None:
     _print(sync_obligations(_ledger(), _client()))
 
 
+def cmd_target_export(args) -> None:
+    from .scout import export_target
+
+    _print(export_target(_client(), args.theorem_id, Path(args.directory), args.mission))
+
+
+def cmd_target_file(args) -> None:
+    target = gate_module.Target(**json.loads(Path(args.file).read_text()))
+    _print({"target": _ledger().add_target(target, "platform"), "name": target.theorem_name})
+
+
 def cmd_export(args) -> None:
     from .transfer import export_state
 
@@ -227,6 +238,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("mathlib_rev")
     p.add_argument("toolchain")
     p.set_defaults(run=cmd_target_import)
+    p = target.add_parser("export", help="write a target, mirrors and dossier for another machine")
+    p.add_argument("theorem_id")
+    p.add_argument("directory")
+    p.add_argument("--mission")
+    p.set_defaults(run=cmd_target_export)
+    p = target.add_parser("add-file", help="freeze a target written by `target export`")
+    p.add_argument("file")
+    p.set_defaults(run=cmd_target_file)
     p = target.add_parser("list")
     p.set_defaults(run=cmd_target_list)
 

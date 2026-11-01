@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -193,6 +194,27 @@ async def run_baseline(
         outcome, note = "budget_exhausted", run.subtype
     ledger.finish_attempt(attempt_id, outcome, note)
     return outcome, None
+
+
+def preflight(plan_path: Path) -> list[dict]:
+    """Does every statement compile in this environment? Uses no model, and spends nothing."""
+    plan = Plan.load(plan_path)
+    env = env_for(plan.toolchain, plan.mathlib_rev)
+    rows = []
+    for slug in plan.targets:
+        target = target_from_mirror(plan.mirror_root, slug, plan.mathlib_rev, plan.toolchain)
+        started = time.monotonic()
+        result = gate_module.check(
+            "theorem solution : True := trivial\n", target, env, mirror_roots=[plan.mirror_root],
+            cache_dir=env.root / ".gate-cache", timeout=1800,
+        )
+        broken = [c for c in result.failures() if c.name in ("target_builds", "imports_resolve")]
+        rows.append({
+            "slug": slug, "builds": not broken, "seconds": round(time.monotonic() - started, 1),
+            "detail": broken[0].detail[:300] if broken else "",
+        })
+        print(json.dumps(rows[-1]), file=sys.stderr, flush=True)
+    return rows
 
 
 async def run_benchmark(

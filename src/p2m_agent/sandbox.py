@@ -56,10 +56,11 @@ def macos_profile(policy: Policy, home: Path) -> str:
 def bwrap_arguments(policy: Policy, home: Path) -> list[str]:
     arguments = ["--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"]
     arguments += ["--tmpfs", str(home.resolve())]
+    # The -try forms skip a path that does not exist yet, instead of refusing to start.
     for path in _paths(policy.read):
-        arguments += ["--ro-bind", path, path]
+        arguments += ["--ro-bind-try", path, path]
     for path in _paths(policy.write):
-        arguments += ["--bind", path, path]
+        arguments += ["--bind-try", path, path]
     if not policy.network:
         arguments.append("--unshare-net")
     return [*arguments, "--die-with-parent"]

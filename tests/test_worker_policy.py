@@ -146,8 +146,8 @@ def test_bwrap_arguments_hide_home(tmp_path):
     arguments = bwrap_arguments(Policy(read=(home / "r",), write=(home / "w",)), home)
     text = " ".join(arguments)
     assert f"--tmpfs {home.resolve()}" in text
-    assert f"--ro-bind {(home / 'r').resolve()}" in text
-    assert f"--bind {(home / 'w').resolve()}" in text
+    assert f"--ro-bind-try {(home / 'r').resolve()}" in text
+    assert f"--bind-try {(home / 'w').resolve()}" in text
     assert "--unshare-net" in arguments
 
 

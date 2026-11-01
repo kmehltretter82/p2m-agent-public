@@ -154,8 +154,11 @@ def cmd_report(args) -> None:
 
 
 def cmd_benchmark(args) -> None:
-    from .benchmark import run_benchmark
+    from .benchmark import preflight, run_benchmark
 
+    if args.preflight:
+        _print(preflight(Path(args.plan)))
+        return
     while True:
         result = asyncio.run(run_benchmark(_ledger(), Path(args.plan), args.arm, args.only))
         _print(result)
@@ -187,6 +190,18 @@ def cmd_sync(args) -> None:
     from .reductions import sync_obligations
 
     _print(sync_obligations(_ledger(), _client()))
+
+
+def cmd_export(args) -> None:
+    from .transfer import export_state
+
+    _print(export_state(paths(), Path(args.archive)))
+
+
+def cmd_import(args) -> None:
+    from .transfer import import_state
+
+    _print(import_state(paths(), Path(args.archive)))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -272,6 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--arm", choices=["baseline", "agent"], action="append")
     p.add_argument("--only", action="append", help="limit to these slugs")
     p.add_argument("--wait", action="store_true", help="sleep through plan limits, then continue")
+    p.add_argument("--preflight", action="store_true", help="check the statements compile; no model")
     p.set_defaults(run=cmd_benchmark)
 
     p = commands.add_parser("frontier", help="a mission's milestones and open leaves")
@@ -285,6 +301,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(run=cmd_dossier)
     p = commands.add_parser("sync", help="update reduction obligations from the platform")
     p.set_defaults(run=cmd_sync)
+    p = commands.add_parser("export", help="pack the ledger and attempts for another machine")
+    p.add_argument("archive")
+    p.set_defaults(run=cmd_export)
+    p = commands.add_parser("import", help="unpack state from `export`; never overwrites a ledger")
+    p.add_argument("archive")
+    p.set_defaults(run=cmd_import)
     return parser
 
 

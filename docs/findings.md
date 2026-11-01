@@ -105,3 +105,14 @@ Measured on 1 November 2026: 16 GB RAM, 4 Cortex-A76 cores, Debian 13, Lean 4.33
 - **The Mathlib cache works on ARM Linux.** A fresh environment took under 8 minutes including
   dependencies, used 7.5 GB, and had no missing modules or stale stamps. So the 7 missing modules
   on the Mac came from that seed copy, not from upstream.
+- **Whole `import Mathlib` is about 40 times faster than on the Mac:** 11s cold and 5s warm, against
+  296s and 332s. Everything stays in the file cache here, so the 605 whole-Mathlib targets that were
+  impractical on the Mac are workable.
+- **The worker runs under `bwrap`.** A toy target took about a minute and $0.25, with no tool calls
+  denied. Peak resident memory was 8.26 GB, 7.85 GB of it Lean. Most of that is Mathlib's shared
+  file mappings, and it fits comfortably in 16 GB.
+- **The canary tests pass on Linux too.** Without the sandbox Lean reads the secret, and with it Lean
+  cannot, cannot write outside its directory, and cannot reach the network.
+- **`kill -9` of the controller mid-proof leaves nothing behind.** No Claude, MCP or Lean process
+  survived, the session id and work in progress were intact, and `p2m benchmark` resumed the attempt.
+  Usage from the killed query is lost from the token counts, because it is only reported at the end.

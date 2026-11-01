@@ -18,8 +18,8 @@ of any window (`P2M_STOP_AT_UTILIZATION`). See "Claude usage".
 
 | Question | Answer |
 |---|---|
-| Does `GET /environments` match the docs? | **Not checked**: it needs the Prove2Me key, which stays unused until the user decides |
-| Is `db584cd` (the workspace's pin) a live platform environment? | **Not checked**, same reason. It is not in the documented table |
+| Does `GET /environments` match the docs? | **Yes**: 4.33.1/`0df444a` (default), 4.30.0/`c5ea003`, 4.29.0-rc3/`777aaa6` |
+| Is `db584cd` (the workspace's pin) a live platform environment? | **No.** So `prove2me_workspace` is pinned to something the server does not verify against |
 | Platform version | `0.13.6` from the public `/health`, matching the docs this client was written against |
 
 The agent's own environment is the documented default: Lean 4.33.1 with Mathlib `0df444a`, at
@@ -75,3 +75,33 @@ Agent SDK on the plan login, with `apiKeySource: none`:
 There is no real `rg` binary on this machine's PATH, only a shell function that proxies Claude
 Code's bundled copy, and `lean-lsp-mcp` needs a real one for local search. The project installs
 one into its own virtual environment, so that it works the same on the Pi.
+
+## Gate against the real server (M2)
+
+Run on 1 November 2026 on three private toy theorems, since deprecated. Full results are in
+[calibration.json](calibration.json). The gate and the server agreed on 14 of 15 cases:
+
+- **Rejected by both:** compile error, extra hypothesis, changed binder type, `sorry`, `sorry` in a
+  helper, importing the target, a new axiom, `native_decide`, a namespaced `solution`, a local
+  instance that changes what the same text means, and a disproof negating only the conclusion.
+- **Accepted by both:** a renamed binder, an implicit binder in place of an explicit one, and a
+  definitionally equal statement. The gate warns on the last two, and the server does not mind.
+- **The one disagreement:** `def solution` is accepted by the server and rejected by the gate. The
+  gate stays stricter, because the platform's documented rule asks for a `theorem`.
+
+**Crash recovery, live:** a `POST` reached the server and the process then behaved as if it had
+crashed. The ledger stayed in `intent`, `reconcile` found the submission by matching the hash of the
+stored source, and the verdict was recorded, with one copy on the server.
+
+**Side effect on the profile:** proving a private toy counted as a real first solve, so calibration
+added 1 to `num_solved_prob` and 1 to `trust`, and 3 to `num_submitted_prob`. The docs do not
+mention this. Accept-cases shared one theorem to keep it to one. Other submissions from the same
+account landed during the run, so the profile's total change is larger than this.
+
+## Pi 500+ (M7)
+
+Measured on 1 November 2026: 16 GB RAM, 4 Cortex-A76 cores, Debian 13, Lean 4.33.1.
+
+- **The Mathlib cache works on ARM Linux.** A fresh environment took under 8 minutes including
+  dependencies, used 7.5 GB, and had no missing modules or stale stamps. So the 7 missing modules
+  on the Mac came from that seed copy, not from upstream.

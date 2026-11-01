@@ -1,0 +1,178 @@
+{
+ "note": "Private toy theorems, since deprecated. The gate ran on the Pi; the server verdicts are real.",
+ "crash_recovery": {
+  "state_after_crash": "intent",
+  "reconcile": [
+   {
+    "submission": 1,
+    "state": "sent",
+    "remote_id": "8a58c7ab-95ab-477e-be63-58805f7b65b9"
+   }
+  ],
+  "verdict": {
+   "submission": 1,
+   "remote_id": "8a58c7ab-95ab-477e-be63-58805f7b65b9",
+   "status": "ACCEPTED",
+   "outcome": "proved",
+   "error": ""
+  },
+  "ledger_outcome": "proved",
+  "accepted_copies_of_this_file": 1
+ },
+ "cases": [
+  {
+   "case": "compile error",
+   "gate": "fail",
+   "gate_failed": [
+    "compiles"
+   ],
+   "gate_warned": [],
+   "server": "CE",
+   "server_error": "Compile error in your proof:\nline 1: Unknown identifier `no_such_lemma`"
+  },
+  {
+   "case": "extra hypothesis",
+   "gate": "fail",
+   "gate_failed": [
+    "statement_matches"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Your proof does not match the target type:\nType mismatch\n  solution\nhas type\n  ∀ (n : Nat), n > 5 → n + 0 = n\nbut is expected to have type\n  ∀ (n : Nat), n + 0 = n\nUnknown constant `_check`"
+  },
+  {
+   "case": "changed binder type",
+   "gate": "fail",
+   "gate_failed": [
+    "statement_matches"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Your proof does not match the target type:\nType mismatch\n  solution\nhas type\n  ∀ (n : Int), n + 0 = n\nbut is expected to have type\n  ∀ (n : Nat), n + 0 = n\nUnknown constant `_check`"
+  },
+  {
+   "case": "sorry",
+   "gate": "fail",
+   "gate_failed": [
+    "no_sorry_warning",
+    "no_own_sorry",
+    "axioms_allowed"
+   ],
+   "gate_warned": [],
+   "server": "SORRY",
+   "server_error": "Usage of `sorry`/`sorryAx` is not allowed:\n  - line 1: declaration uses `sorry`\n  - line 1: n : Nat\n⊢ n + 0 = n"
+  },
+  {
+   "case": "sorry in a helper",
+   "gate": "fail",
+   "gate_failed": [
+    "no_sorry_warning",
+    "no_own_sorry",
+    "axioms_allowed"
+   ],
+   "gate_warned": [],
+   "server": "SORRY",
+   "server_error": "Usage of `sorry`/`sorryAx` is not allowed:\n  - line 1: declaration uses `sorry`\n  - line 1: n : Nat\n⊢ n + 0 = n"
+  },
+  {
+   "case": "imports its target",
+   "gate": "fail",
+   "gate_failed": [
+    "does_not_import_target"
+   ],
+   "gate_warned": [],
+   "server": "FAILED",
+   "server_error": "A proof may not import its own target theorem (Theorems.Thm_p2m_agent_cal_ee949dbe_a): the target is a `sorry` placeholder, so importing it would let the proof cite the unproved goal as a lemma. Prove the statement direc"
+  },
+  {
+   "case": "new axiom",
+   "gate": "fail",
+   "gate_failed": [
+    "no_new_axioms",
+    "axioms_allowed"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Proof uses disallowed axioms: cheat"
+  },
+  {
+   "case": "native_decide",
+   "gate": "fail",
+   "gate_failed": [
+    "no_new_axioms",
+    "axioms_allowed"
+   ],
+   "gate_warned": [],
+   "server": "FAILED",
+   "server_error": "Submission rejected by the soundness guard:\nline 2: `native_decide` — trusts compiled native code instead of the kernel"
+  },
+  {
+   "case": "namespaced solution",
+   "gate": "fail",
+   "gate_failed": [
+    "solution_exists"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Your proof does not match the target type:\nUnknown identifier `solution`\n\nNote: It is not possible to treat `solution` as an implicitly bound variable here because the `autoImplicit` option is set to `false`."
+  },
+  {
+   "case": "def instead of theorem",
+   "gate": "fail",
+   "gate_failed": [
+    "solution_is_theorem"
+   ],
+   "gate_warned": [],
+   "server": "ACCEPTED",
+   "server_error": ""
+  },
+  {
+   "case": "local instance trick",
+   "gate": "fail",
+   "gate_failed": [
+    "statement_matches"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Your proof does not match the target type:\nType mismatch\n  solution\nhas type\n  ∀ (n : Nat), @HAdd.hAdd Nat Nat Nat (@instHAdd Nat instAddNat_submissions) 0 n = n\nbut is expected to have type\n  ∀ (n : Nat), @HAdd.hAdd Nat"
+  },
+  {
+   "case": "disproof negating only the conclusion",
+   "gate": "fail",
+   "gate_failed": [
+    "statement_matches"
+   ],
+   "gate_warned": [],
+   "server": "WA",
+   "server_error": "Your proof does not match the target type:\nApplication type mismatch: The argument\n  p2m_agent_cal_ee949dbe_c\nhas type\n  ∀ (n : Nat), n + 1 = n\nof sort `Prop` but is expected to have type\n  Nat\nof sort `Type` in the appl"
+  },
+  {
+   "case": "renamed binder",
+   "gate": "pass",
+   "gate_failed": [],
+   "gate_warned": [],
+   "server": "ACCEPTED",
+   "server_error": ""
+  },
+  {
+   "case": "implicit binder instead of explicit",
+   "gate": "pass",
+   "gate_failed": [],
+   "gate_warned": [
+    "binders_identical"
+   ],
+   "server": "ACCEPTED",
+   "server_error": ""
+  },
+  {
+   "case": "definitionally equal statement",
+   "gate": "pass",
+   "gate_failed": [],
+   "gate_warned": [
+    "statement_matches"
+   ],
+   "server": "ACCEPTED",
+   "server_error": ""
+  }
+ ]
+}

@@ -434,6 +434,9 @@ async def _consume(
             ledger.record_usage(attempt_id, message.usage, message.num_turns, message.total_cost_usd)
             run.subtype = message.subtype
             run.is_error = message.is_error
+            # Running up to a limit can end in a plain 429 with no rejected status event first.
+            if message.api_error_status == 429:
+                run.limit_rejected = True
             log({"event": "result", "subtype": message.subtype, "turns": message.num_turns,
                  "cost_usd": message.total_cost_usd, "usage": message.usage,
                  "terminal_reason": message.terminal_reason,

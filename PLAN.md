@@ -5,9 +5,12 @@
 
 ## Current status
 
-Your direction on 1 November: focus only on finishing the
+**M5 reached on 1 November:** the agent proved the root of the
 [Consumption-Investment mission](https://prove2.me/missions/Markov_Decision_Processes_VII%3A_Consumption-Investment_Problems_and_Regime_Switching)
-with the agent on the Pi. **M4 is paused** with 4 of its 10 targets done, and can resume later with
+(Bäuerle–Rieder Theorem 4.3.3), with no hand-edited Lean, for about $4.26 estimated. The user approved
+the exact file, and the server's verdict was `ACCEPTED`. See `proofs/mdp7/`.
+
+The user's direction that day was to focus only on this mission, using the agent on the Pi. **M4 is paused** with 4 of its 10 targets done, and can resume later with
 the same command. Every finished attempt in both arms proved its target so far, so it has not yet
 separated the agent from the baseline. Treat that as no conclusion.
 

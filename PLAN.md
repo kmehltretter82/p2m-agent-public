@@ -3,7 +3,21 @@
 **Status:** draft, 31 October 2026. No code yet. Source idea: [IDEA.md](IDEA.md).
 **Working name:** `p2m-agent` (CLI: `p2m`).
 
-## Current status
+## Final status
+
+Execution ended on 2 November 2026. M0 to M3 and M5 are done. These items were closed by the user's
+decision, not completed:
+
+- **M4:** closed as paused. The agent proved all 5 targets it finished, of 10, and the baseline stopped
+  at 4 of 10. There is no full comparison and no formal continue-or-stop decision.
+- **M6:** closed with the public reduction not done. The private path works against the real server.
+- **M7:** closed with the 24-hour run and a real power cut not done. The reboot, thermal, state
+  transfer and local Loogle checks passed, and the service is stopped and disabled.
+
+M8 was never triggered, so nothing was built for it. M9 is public, but no one else has yet installed it
+with their own credentials, which is its remaining check.
+
+## Status during execution
 
 **M5 reached on 1 November:** the agent proved the root of the
 [Consumption-Investment mission](https://prove2.me/missions/Markov_Decision_Processes_VII%3A_Consumption-Investment_Problems_and_Regime_Switching)

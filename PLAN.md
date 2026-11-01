@@ -10,6 +10,9 @@
 (Bäuerle–Rieder Theorem 4.3.3), with no hand-edited Lean, for about $4.26 estimated. The user approved
 the exact file, and the server's verdict was `ACCEPTED`. See `proofs/mdp7/`.
 
+**M6's private path works live:** a toy reduction went from `SKETCH_ACCEPTED` to `proved_via_reduction`
+through the real submit path. A public reduction still needs a real target and your approval.
+
 The user's direction that day was to focus only on this mission, using the agent on the Pi. **M4 is paused** with 4 of its 10 targets done, and can resume later with
 the same command. Every finished attempt in both arms proved its target so far, so it has not yet
 separated the agent from the baseline. Treat that as no conclusion.

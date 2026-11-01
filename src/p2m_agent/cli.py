@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -69,10 +70,16 @@ def cmd_check(args) -> None:
     target = ledger.target(args.target)
     source = Path(args.file).read_text()
     env = env_for(target.toolchain, target.mathlib_rev)
-    result = gate_module.check(
-        source, target, env, mode=args.mode, mirror_roots=_mirror_roots(args),
-        cache_dir=env.root / ".gate-cache",
-    )
+    # The gate compiles code a model wrote, and Lean runs code while compiling, so sandbox it.
+    from .worker import gate_wrap
+
+    paths().home.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=paths().home, prefix="gate-") as workdir:
+        result = gate_module.check(
+            source, target, env, mode=args.mode, mirror_roots=_mirror_roots(args),
+            cache_dir=env.root / ".gate-cache", wrap=gate_wrap(env, Path(workdir)),
+            workdir=Path(workdir), timeout=args.timeout,
+        )
     candidate = ledger.add_candidate(args.target, source)
     ledger.record_gate(candidate, result)
     _print({"candidate": candidate, **result.to_json()})
@@ -293,6 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("file")
     p.add_argument("--target", type=int, required=True)
     p.add_argument("--mode", choices=["prove", "disprove"], default="prove")
+    p.add_argument("--timeout", type=int, default=1500)
     mirror_option(p)
     p.set_defaults(run=cmd_check)
 

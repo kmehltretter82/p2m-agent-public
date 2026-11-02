@@ -199,6 +199,7 @@ def ensure_env(env: LeanEnv, seed: Path | None = None, timeout: int = 3600) -> d
     if missing:
         raise EnvError(f"{len(missing)} Mathlib modules have no build file: {missing[:5]}")
 
+    warm_lake(env, timeout)
     return {
         "root": str(root),
         "toolchain": env.toolchain,
@@ -206,6 +207,20 @@ def ensure_env(env: LeanEnv, seed: Path | None = None, timeout: int = 3600) -> d
         "repaired": repaired,
         "smoke": smoke_test(env),
     }
+
+
+def warm_lake(env: LeanEnv, timeout: int = 3600) -> None:
+    """Let Lake finish writing its bookkeeping while the environment is still writable.
+
+    Workers see Mathlib read-only. If Lake still has a `.hash` file to write for even one module,
+    `lake setup-file` fails there and takes the language server down with it.
+    """
+    probe = env.root / "Solutions" / "LakeProbe.lean"
+    probe.write_text("import Mathlib\n")
+    try:
+        _run([str(env.lake), "setup-file", str(probe)], env.root, timeout)
+    finally:
+        probe.unlink(missing_ok=True)
 
 
 def lean_path(env: LeanEnv, *extra: Path) -> str:

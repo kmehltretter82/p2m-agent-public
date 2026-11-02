@@ -250,6 +250,18 @@ def cmd_target_file(args) -> None:
     _print({"target": _ledger().add_target(target, "platform"), "name": target.theorem_name})
 
 
+def cmd_queue_export(args) -> None:
+    from .workqueue import export_queue
+
+    _print(export_queue(_client(), Path(args.directory), args.limit, args.include_open_problems))
+
+
+def cmd_queue_run(args) -> None:
+    from .workqueue import run_queue
+
+    _print(run_queue(_ledger(), Path(args.directory), args.step, args.max_per_target, args.web))
+
+
 def cmd_export(args) -> None:
     from .transfer import export_state
 
@@ -379,6 +391,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(run=cmd_dossier)
     p = commands.add_parser("sync", help="update reduction obligations from the platform")
     p.set_defaults(run=cmd_sync)
+    queue = commands.add_parser("queue", help="prove many open targets; nothing is submitted").add_subparsers(required=True)
+    p = queue.add_parser("export", help="choose open targets and write them as files; needs the key")
+    p.add_argument("directory")
+    p.add_argument("--limit", type=int, default=15)
+    p.add_argument("--include-open-problems", action="store_true", help="also take missions labelled OpenProblem")
+    p.set_defaults(run=cmd_queue_export)
+    p = queue.add_parser("run", help="work through exported targets; needs no key")
+    p.add_argument("directory")
+    p.add_argument("--step", type=float, default=6.0, help="estimated dollars per segment")
+    p.add_argument("--max-per-target", type=float, help="estimated dollars per target; no cap by default")
+    p.add_argument("--web", action="store_true")
+    p.set_defaults(run=cmd_queue_run)
+
     p = commands.add_parser("export", help="pack the ledger and attempts for another machine")
     p.add_argument("archive")
     p.set_defaults(run=cmd_export)

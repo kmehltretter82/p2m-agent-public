@@ -47,8 +47,9 @@ class Environment(_Model):
 
 class Audit(_Model):
     decision: str
-    comment: str = ""
-    reviewer_username: str = ""
+    # The platform can return null for either of these.
+    comment: str | None = ""
+    reviewer_username: str | None = ""
 
 
 class Theorem(_Model):
@@ -58,7 +59,7 @@ class Theorem(_Model):
     formal_statement: str
     preamble: str = ""
     mathlib_rev: str
-    natural_language_statement: str = ""
+    natural_language_statement: str | None = ""
     source: str | None = None
     deprecated_at: str | None = None
     audits: list[Audit] = []
